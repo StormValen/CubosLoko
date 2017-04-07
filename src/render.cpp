@@ -363,22 +363,28 @@ namespace SmallBox {
 
 	float cubeVerts[] = {
 		//-5,0,-5 -- 5, 10, 5
-		-1.f,  0.f, -1.f,
-		1.f,  0.f, -1.f,
-		1.f,  0.f,  1.f,
-		-1.f,  0.f,  1.f,
-		-1.f, 2.f, -1.f,
-		1.f, 2.f, -1.f,
-		1.f, 2.f,  1.f,
-		-1.f, 2.f,  1.f,
+		-1.f,  1.f, -1.f,
+		1.f,  1.f, -1.f,
+		1.f,  1.f,  1.f,
+		-1.f,  1.f,  1.f,
+		-1.f, 3.f, -1.f,
+		1.f, 3.f, -1.f,
+		1.f, 3.f,  1.f,
+		-1.f, 3.f,  1.f,
 	};
 	GLubyte cubeIdx[] = {
-		2,3,0,1, //Floor - TriangleStrip
-		4,5,1,0, //Wall - Lines
-		5,6,2,1, //Wall - Lines
-		6,7,3,2, //Wall - Lines
-		7,4,0,3,  //Wall - Lines
-		6,7,4,1
+		3,6,7,
+		3,2,6,
+		2,5,6,
+		2,1,5,
+		1,4,5,
+		1,0,4,
+		0,7,4,
+		0,3,7,
+		5,4,6,
+		4,7,6,
+		2,0,1,
+		2,3,0
 	};
 
 	const char* vertShader_xform =
@@ -402,12 +408,12 @@ void main() {\n\
 		glGenBuffers(2, cubeVbo);
 
 		glBindBuffer(GL_ARRAY_BUFFER, cubeVbo[0]);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 24, cubeVerts, GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 36, cubeVerts, GL_STATIC_DRAW);
 		glVertexAttribPointer((GLuint)0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(0);
 
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cubeVbo[1]);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLubyte) * 24, cubeIdx, GL_STATIC_DRAW);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLubyte) * 36, cubeIdx, GL_STATIC_DRAW);
 
 		glBindVertexArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -434,16 +440,21 @@ void main() {\n\
 		glBindVertexArray(cubeVao);
 		glUseProgram(cubeProgram);
 		glUniformMatrix4fv(glGetUniformLocation(cubeProgram, "mvpMat"), 1, GL_FALSE, glm::value_ptr(_MVP));
-		//FLOOR
-		glUniform4f(glGetUniformLocation(cubeProgram, "color"), 0.6f, 0.6f, 0.6f, 1.f);
-		glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_BYTE, 0);
+	
 		//WALLS
 		glUniform4f(glGetUniformLocation(cubeProgram, "color"), 1.f, 0.f, 0.f, 0.5f);
-		glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_BYTE, (void*)(sizeof(GLubyte) * 4));
-		glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_BYTE, (void*)(sizeof(GLubyte) * 8));
-		glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_BYTE, (void*)(sizeof(GLubyte) * 12));
-		glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_BYTE, (void*)(sizeof(GLubyte) * 16));
-		glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_BYTE, (void*)(sizeof(GLubyte) * 20));
+		glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_BYTE, 0);
+		glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_BYTE, (void*)(sizeof(GLubyte) * 3));
+		glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_BYTE, (void*)(sizeof(GLubyte) * 6));
+		glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_BYTE, (void*)(sizeof(GLubyte) * 9));
+		glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_BYTE, (void*)(sizeof(GLubyte) * 12));
+		glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_BYTE, (void*)(sizeof(GLubyte) * 15));
+		glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_BYTE, (void*)(sizeof(GLubyte) * 18));
+		glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_BYTE, (void*)(sizeof(GLubyte) * 21));
+		glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_BYTE, (void*)(sizeof(GLubyte) * 24));
+		glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_BYTE, (void*)(sizeof(GLubyte) * 27));
+		glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_BYTE, (void*)(sizeof(GLubyte) * 30));
+		glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_BYTE, (void*)(sizeof(GLubyte) * 33));
 
 		glUseProgram(0);
 		glBindVertexArray(0);
