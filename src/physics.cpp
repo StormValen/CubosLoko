@@ -14,21 +14,24 @@ bool show_test_window = false;
 namespace Cube {
 	extern void setupCube();
 	extern void cleanupCube();
-	extern void updateCube(glm::mat4* transform);
+	extern void updateCube(const glm::mat4& transform);
 	extern void drawCube();
 }
 
 float timePerFrame = 0.03;
-glm::vec3 fuerzaInicial = glm::vec3 (3.0f, 3.0f, 3.0f);
+glm::vec3 fuerzaInicial = glm::vec3 (50.f, 200.f, 0.f);
 glm::vec3 gravedad = glm::vec3 (0.0f,-9.8f,0.0f);
 glm::vec3 fuerzaTotal = fuerzaInicial+gravedad;
 glm::vec3 torque = glm::vec3 (0.0f,0.0f,0.0f);
+glm::vec3 PuntoDeFuerza = glm::vec3(0.1f,0.5f,0.1f);
 
 
 struct theCube {
 	glm::vec3 posCentroMasa;
 	glm::vec3 lastPosCentroMasa;
 	glm::vec3 vel;
+	glm::quat qRotacion;
+	glm::quat qLastRotacion;
 	glm::mat3 rotacion;
 	glm::mat3 lastRotacion;
 	glm::vec3 velAngular;
@@ -59,52 +62,65 @@ void GUI() {
 	}
 }
 
-void UpdatePosition() {
-
-}
-
-
-
 void PhysicsInit() {
 	TheCube->first = true;
-	TheCube->rotacion = glm::mat3(0.0f, 0.0f, 0.0f,
-								  0.0f, 0.0f, 0.0f,
-								  0.0f, 0.0f, 0.0f);
+	TheCube->rotacion = glm::mat3(1.0f);
 	TheCube->velAngular = glm::vec3(0.0f,0.0f,0.0f);
-	TheCube->masa = 3.0f;
+	TheCube->masa = 0.3f;
 	TheCube->vel = glm::vec3(0.0f, 0.0f, 0.0f);
 
 	TheCube->linearMomentum = glm::vec3(0.0f, 0.0f, 0.0f);
 	TheCube->angularMomentum = glm::vec3(0.0f, 0.0f, 0.0f);
-	TheCube->posCentroMasa = glm::vec3(0.0f, 0.5f, 0.0f);
-	TheCube->inerciaBody = glm::mat3(((1/12)*TheCube->masa)*((glm::pow(0.5f,2) + glm::pow(0.5,2))),0,0,
-									 0,((1 / 12)*TheCube->masa)*((glm::pow(0.5f, 2) + glm::pow(0.5, 2))),0,
-									 0,0,((1 / 12)*TheCube->masa)*((glm::pow(0.5f, 2) + glm::pow(0.5, 2))));
-	torque = glm::cross(fuerzaTotal, (TheCube->posCentroMasa-glm::vec3(0.0f,0.5f,0.0f),-TheCube->posCentroMasa));
+	TheCube->posCentroMasa = glm::vec3(0.0f, 0.0f, 0.0f);
+
+	TheCube->inerciaBody = glm::mat3(TheCube->masa*2/12, 0, 0,
+		0, TheCube->masa * 2 / 12, 0,
+		0, 0, TheCube->masa * 2 / 12);
+
+	TheCube->qRotacion = glm::quat(0.0f, 0.0f, 0.0f, 0.0f);
+	
+
+	torque = glm::cross((TheCube->posCentroMasa-PuntoDeFuerza-TheCube->posCentroMasa),fuerzaTotal);
 	//TheCube->inertiaTensor = glm::mat3(TheCube->rotacion*TheCube->inerciaBody*glm::transpose(TheCube->rotacion));
+
+
 }
 void PhysicsUpdate(float dt) {
+	TheCube->qLastRotacion = TheCube->qRotacion;
+	
 	TheCube->lastLinearMomentum = TheCube->linearMomentum;
 	TheCube->linearMomentum = TheCube->lastLinearMomentum + (dt * fuerzaTotal);
+	
 	TheCube->lastAngularMomentum = TheCube->angularMomentum;
+	
 	if (TheCube->first) {
 		TheCube->angularMomentum = TheCube->lastAngularMomentum + (dt * torque);
+		fuerzaTotal -= fuerzaInicial;
 		TheCube->first = false;
 	}
+	
 	TheCube->vel = TheCube->linearMomentum / TheCube->masa;
+	
 	TheCube->lastPosCentroMasa = TheCube->posCentroMasa;
 	TheCube->posCentroMasa = TheCube->lastPosCentroMasa + (dt * TheCube->vel);
+	
 	TheCube->lastRotacion = TheCube->rotacion;
-	TheCube->INVinertiaTensor = TheCube->lastRotacion * glm::inverse(TheCube->inerciaBody) * glm::transpose(TheCube->lastRotacion);
+
+	glm::mat3 TempRot = glm::mat3_cast(TheCube->qRotacion);
+
+	TheCube->INVinertiaTensor = TempRot * glm::inverse(TheCube->inerciaBody) * glm::transpose(TempRot);
 	TheCube->velAngular = TheCube->INVinertiaTensor * TheCube->angularMomentum;
-	glm::mat3 matrizAngular = glm::mat3(0, -TheCube->velAngular.z, TheCube->velAngular.y,
-		TheCube->velAngular.z, 0, -TheCube->velAngular.x,
-		-TheCube->velAngular.y, TheCube->velAngular.x, 0);
-	TheCube->rotacion = TheCube->lastRotacion + dt * (matrizAngular*TheCube->lastRotacion);
 
+	TheCube->qRotacion = TheCube->qLastRotacion + dt * 1/2*(glm::quat(0.0f,TheCube->velAngular.x, TheCube->velAngular.y, TheCube->velAngular.z)*TheCube->qLastRotacion);
+	TheCube->qRotacion = glm::normalize(TheCube->qRotacion);
 
-	//TODO objMat crear matriz FOTO!!!!!!!!!!
+	glm::mat4 FinalRot = glm::mat4_cast(TheCube->qRotacion);
 
+	glm::mat4 matIdentidad = glm::mat4(1.0f);
+	matIdentidad = glm::translate(matIdentidad, glm::vec3(TheCube->posCentroMasa.x, TheCube->posCentroMasa.y, TheCube->posCentroMasa.z));
+	matIdentidad = matIdentidad*FinalRot;
+
+	Cube::updateCube(matIdentidad);
 }
 void PhysicsCleanup() {
 	//TODO
