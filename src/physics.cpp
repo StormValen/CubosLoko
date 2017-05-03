@@ -11,6 +11,7 @@
 
 bool show_test_window = false;
 
+
 namespace Cube {
 	extern void setupCube();
 	extern void cleanupCube();
@@ -19,12 +20,13 @@ namespace Cube {
 }
 
 float timePerFrame = 0.03;
-glm::vec3 fuerzaInicial = glm::vec3 (50.f, 200.f, 0.f);
+glm::vec3 fuerzaInicial;
 glm::vec3 gravedad = glm::vec3 (0.0f,-9.8f,0.0f);
-glm::vec3 fuerzaTotal = fuerzaInicial+gravedad;
+glm::vec3 fuerzaTotal;
 glm::vec3 torque = glm::vec3 (0.0f,0.0f,0.0f);
-glm::vec3 PuntoDeFuerza = glm::vec3(0.1f,0.5f,0.1f);
+glm::vec3 PuntoDeFuerza;
 float halfW = 0.5;
+float Time =0;
 
 glm::vec3 verts[] = {
 	glm::vec3(-halfW, -halfW, -halfW),
@@ -75,7 +77,10 @@ void GUI() {
 
 glm::vec3 RandPosCube() {
 	srand(time(NULL));
-	glm::vec3 newCubePos = glm::vec3(rand() % 8 - 4, 2, rand() % 8 - 4);
+	PuntoDeFuerza =glm::vec3(((float)rand() / RAND_MAX), ((float)rand() / RAND_MAX), ((float)rand() / RAND_MAX));
+	fuerzaInicial = glm::vec3((-5 + (float)rand() / RAND_MAX) * 10, ((float)rand() / RAND_MAX) * 100 - 0, ((float)rand() / RAND_MAX) * 100 - 0);
+	fuerzaTotal = fuerzaInicial+gravedad;
+	glm::vec3 newCubePos = glm::vec3(rand() % 8 - 4, 3, rand() % 8 - 4);
 	return newCubePos;
 }
 
@@ -84,7 +89,7 @@ void PhysicsInit() {
 	TheCube->first = true;
 	TheCube->rotacion = glm::mat3(1.0f);
 	TheCube->velAngular = glm::vec3(0.0f,0.0f,0.0f);
-	TheCube->masa = 0.3f;
+	TheCube->masa = 0.5f;
 	TheCube->vel = glm::vec3(0.0f, 0.0f, 0.0f);
 
 	TheCube->linearMomentum = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -106,15 +111,23 @@ void UpdateColision(glm::vec4 verticeTrans, int d, glm::vec3 normal) {
 
 	float impulse;
 	float e = 1;
-	glm::vec3 pa = TheCube->vel + glm::cross(TheCube->velAngular, (glm::vec3(verticeTrans) + TheCube->posCentroMasa));
+	glm::vec3 pa = TheCube->vel + glm::cross(TheCube->velAngular, (glm::vec3(verticeTrans) - TheCube->posCentroMasa));
 	float vRel = glm::dot(normal, pa);
 	
 	glm::vec3 segundoCarro = TheCube->INVinertiaTensor*(glm::cross(glm::vec3(verticeTrans), normal));
 
-	impulse = (-(1 + e)*(-vRel) / ((1 / TheCube->masa) + glm::dot(normal,glm::cross(segundoCarro, glm::vec3(verticeTrans)))+0));
+	impulse = (-(1 + e)*(vRel) / ((1 / TheCube->masa) + glm::dot(normal,glm::cross(segundoCarro, glm::vec3(verticeTrans)))+0));
+
+	glm::vec3 J = impulse*normal;
+	glm::vec3 tImpulse = glm::cross(glm::vec3(verticeTrans), J);
+
+	TheCube->linearMomentum = TheCube->linearMomentum + J;
+	TheCube->angularMomentum = TheCube->angularMomentum + tImpulse;
 }
 
 void CheckColision(glm::vec4 verticeTrans) {
+	glm::vec4 hola = verticeTrans;
+	
 	//FLOOR
 	if (verticeTrans.y <= 0) {
 		glm::vec3 normal = { 0,0,0 };
@@ -124,7 +137,7 @@ void CheckColision(glm::vec4 verticeTrans) {
 		UpdateColision(verticeTrans, d, normal);
 	}
 	//LEFT WALL
-	else if (verticeTrans.x <= -5) {
+	if (verticeTrans.x <= -5) {
 		glm::vec3 normal = { 0,0,0 };
 		float d;
 		normal = { 1,0,0 };
@@ -198,10 +211,10 @@ void PhysicsUpdate(float dt) {
 	matIdentidad = matIdentidad*FinalRot;
 
 	for (int i = 0; i < 8; i++) {
-		glm::vec4 verticeTrans = glm::vec4(verts[i],1.0f)*matIdentidad;
+		glm::vec4 verticeTrans = matIdentidad * glm::vec4(verts[i],1.0f);
 		CheckColision(verticeTrans);
 	}
-	
+
 	
 	Cube::updateCube(matIdentidad);
 }
