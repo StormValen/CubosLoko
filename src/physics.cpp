@@ -26,7 +26,7 @@ glm::vec3 fuerzaTotal;
 glm::vec3 torque = glm::vec3 (0.0f,0.0f,0.0f);
 glm::vec3 PuntoDeFuerza;
 float halfW = 0.5;
-float Time =0;
+int t =0;
 
 glm::vec3 verts[] = {
 	glm::vec3(-halfW, -halfW, -halfW),
@@ -59,7 +59,7 @@ struct theCube {
 	GLfloat masa;
 };
 
-theCube *TheCube = new theCube();
+theCube *TheCube;
 
 void GUI() {
 	{	//FrameRate
@@ -77,15 +77,20 @@ void GUI() {
 
 glm::vec3 RandPosCube() {
 	srand(time(NULL));
-	PuntoDeFuerza =glm::vec3(((float)rand() / RAND_MAX), ((float)rand() / RAND_MAX), ((float)rand() / RAND_MAX));
-	fuerzaInicial = glm::vec3((-5 + (float)rand() / RAND_MAX) * 10, ((float)rand() / RAND_MAX) * 100 - 0, ((float)rand() / RAND_MAX) * 100 - 0);
+	glm::vec3 newCubePos = glm::vec3(rand() % 8 - 4, 2, rand() % 8 - 4);
+	
+	//la fuerza se aplica en la cara inferior del cubo en posicion random
+	PuntoDeFuerza =glm::vec3(newCubePos.x + ((float)rand()/RAND_MAX -0.5f), newCubePos.y - 0.5, newCubePos.z + ((float)rand() / RAND_MAX - 0.5f));
+	//cantidad de fuerza
+	fuerzaInicial = glm::vec3(-50 + rand()%100, rand() % 50 + 150, -50 + rand() % 100);
 	fuerzaTotal = fuerzaInicial+gravedad;
-	glm::vec3 newCubePos = glm::vec3(rand() % 8 - 4, 3, rand() % 8 - 4);
 	return newCubePos;
 }
 
 
 void PhysicsInit() {
+	TheCube = new theCube();
+
 	TheCube->first = true;
 	TheCube->rotacion = glm::mat3(1.0f);
 	TheCube->velAngular = glm::vec3(0.0f,0.0f,0.0f);
@@ -103,7 +108,7 @@ void PhysicsInit() {
 	TheCube->qRotacion = glm::quat(0.0f, 0.0f, 0.0f, 0.0f);
 	
 
-	torque = glm::cross((TheCube->posCentroMasa-PuntoDeFuerza-TheCube->posCentroMasa),fuerzaTotal);
+	torque = glm::cross(TheCube->posCentroMasa-PuntoDeFuerza,fuerzaTotal);
 	//TheCube->inertiaTensor = glm::mat3(TheCube->rotacion*TheCube->inerciaBody*glm::transpose(TheCube->rotacion));
 }
 
@@ -215,7 +220,10 @@ void PhysicsUpdate(float dt) {
 		CheckColision(verticeTrans);
 	}
 
-	
+	if (t % 150 == 0){
+		PhysicsInit();
+	}
+	t++;
 	Cube::updateCube(matIdentidad);
 }
 void PhysicsCleanup() {
